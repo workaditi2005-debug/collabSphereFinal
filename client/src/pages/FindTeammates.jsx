@@ -142,7 +142,7 @@ const FindTeammates = ({ currentUser, activeUsers = [], kanbanData }) => {
       // Test if backend is reachable
       const testResponse = await fetch('http://localhost:5000/api/test');
       const testData = await testResponse.json();
-      console.log("🧪 Backend test:", testData);
+      console.log("Backend test:", testData);
       
       console.log('🔍 Searching teammates with filters:', filters, 'Query:', searchQuery);
       
@@ -452,7 +452,7 @@ const submitRequest = async (e) => {
 
       <div className="teammates-header">
         <div>
-          <h2>🤝 Find Teammates</h2>
+          <h2> Find Teammates</h2>
           <p>Discover and connect with talented collaborators</p>
           {activeUsers.length > 0 && (
             <p className="online-status">
@@ -541,7 +541,7 @@ const submitRequest = async (e) => {
               <h3>Ready to find your perfect teammate?</h3>
               <p>Use the filters on the left and click "Search Teammates" to get started</p>
               {matchingSuggestions.length > 0 && (
-                <p className="hint-text">💡 Check out the real-time matches above!</p>
+                <p className="hint-text">Check out the real-time matches above!</p>
               )}
             </div>
           ) : (

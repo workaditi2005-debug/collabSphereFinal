@@ -296,7 +296,7 @@ Provide personalized feedback in ONLY valid JSON format with no markdown or prea
             marginBottom: '30px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <span style={{ fontSize: '2.5rem' }}>🧠</span>
+              <span style={{ fontSize: '2.5rem' }}></span>
               <h2 style={{ margin: 0, fontSize: '2rem', fontWeight: '700' }}>AI-Powered Quiz</h2>
             </div>
             <p style={{ fontSize: '1.1rem', opacity: 0.95, margin: 0 }}>
@@ -317,7 +317,7 @@ Provide personalized feedback in ONLY valid JSON format with no markdown or prea
               borderRadius: '12px',
               border: '1px solid #e5e7eb'
             }}>
-              <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📊</div>
+              <div style={{ fontSize: '2rem', marginBottom: '8px' }}></div>
               <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#667eea' }}>
                 {quizHistory.length}
               </div>
@@ -329,7 +329,7 @@ Provide personalized feedback in ONLY valid JSON format with no markdown or prea
               borderRadius: '12px',
               border: '1px solid #e5e7eb'
             }}>
-              <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🏆</div>
+              <div style={{ fontSize: '2rem', marginBottom: '8px' }}></div>
               <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981' }}>
                 {quizHistory.length > 0 ? 
                   (quizHistory.reduce((sum, q) => sum + q.percentage, 0) / quizHistory.length).toFixed(0) 
@@ -343,7 +343,7 @@ Provide personalized feedback in ONLY valid JSON format with no markdown or prea
               borderRadius: '12px',
               border: '1px solid #e5e7eb'
             }}>
-              <div style={{ fontSize: '2rem', marginBottom: '8px' }}>⚡</div>
+              <div style={{ fontSize: '2rem', marginBottom: '8px' }}></div>
               <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#f59e0b' }}>
                 #{leaderboard.findIndex(e => e.userEmail === userData?.email) + 1 || '--'}
               </div>
@@ -370,7 +370,7 @@ Provide personalized feedback in ONLY valid JSON format with no markdown or prea
                 gap: '10px'
               }}
             >
-              <span style={{ fontSize: '1.5rem' }}>🚀</span>
+              <span style={{ fontSize: '1.5rem' }}></span>
               Start New Quiz
             </button>
             <button
@@ -390,7 +390,7 @@ Provide personalized feedback in ONLY valid JSON format with no markdown or prea
                 gap: '10px'
               }}
             >
-              <span style={{ fontSize: '1.5rem' }}>🏆</span>
+              <span style={{ fontSize: '1.5rem' }}></span>
               View Leaderboard
             </button>
           </div>

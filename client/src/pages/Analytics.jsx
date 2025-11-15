@@ -205,7 +205,7 @@ const Analytics = () => {
 
         {/* Quality Score Card */}
         <div className="metric-card">
-          <div className="metric-icon">⭐</div>
+          <div className="metric-icon"></div>
           <div className="metric-content">
             <h3>Quality Score</h3>
             <div className="metric-value" style={{ color: getStatusColor(qualityScore) }}>
@@ -226,7 +226,7 @@ const Analytics = () => {
 
         {/* Total Projects Card */}
         <div className="metric-card">
-          <div className="metric-icon">📁</div>
+          <div className="metric-icon"></div>
           <div className="metric-content">
             <h3>Total Projects</h3>
             <div className="metric-value">{metrics.total}</div>
@@ -249,7 +249,7 @@ const Analytics = () => {
 
         {/* Productivity Card */}
         <div className="metric-card">
-          <div className="metric-icon">⚡</div>
+          <div className="metric-icon"></div>
           <div className="metric-content">
             <h3>Productivity</h3>
             <div className="metric-value" style={{ color: '#3b82f6' }}>
@@ -353,10 +353,10 @@ const Analytics = () => {
 
       {/* Analytics Summary */}
       <div className="analytics-summary">
-        <h3>💡 Performance Insights</h3>
+        <h3>Performance Insights</h3>
         <div className="insights-list">
           <div className="insight-item">
-            <span className="insight-icon">🎯</span>
+            <span className="insight-icon"></span>
             <div>
               <strong>Completion Status:</strong>
               <p>
@@ -382,7 +382,7 @@ const Analytics = () => {
           </div>
 
           <div className="insight-item">
-            <span className="insight-icon">📊</span>
+            <span className="insight-icon"></span>
             <div>
               <strong>Recommendations:</strong>
               <p>
