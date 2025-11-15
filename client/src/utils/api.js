@@ -50,7 +50,11 @@ const apiRequest = async (endpoint, options = {}) => {
   };
 
   try {
-    console.log(`🔗 API Request: ${endpoint}`, { method: config.method, data: options.body });
+    console.log(`🔗 API Request: ${endpoint}`, { 
+      method: config.method, 
+      hasAuth: !!token,
+      data: options.body ? JSON.parse(options.body) : null 
+    });
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
@@ -66,6 +70,7 @@ const apiRequest = async (endpoint, options = {}) => {
 
     if (!response.ok) {
       const errorMessage = data?.error || data?.message || `HTTP ${response.status}`;
+      console.error(`❌ API Error ${response.status}:`, errorMessage);
       return { success: false, error: errorMessage, status: response.status, data: null };
     }
 
@@ -108,25 +113,61 @@ export const authAPI = {
 export const projectAPI = {
   getAll: () => apiRequest("/projects", { method: "GET" }),
   create: (projectData) => apiRequest("/projects", { method: "POST", body: JSON.stringify(projectData) }),
-  update: (projectId, updateData) => apiRequest(`/projects/${projectId}`, { method: "PUT", body: JSON.stringify(updateData) }),
-  delete: (projectId) => apiRequest(`/projects/${projectId}`, { method: "DELETE" }),
+  update: (project_id, updateData) => apiRequest(`/projects/${project_id}`, { method: "PUT", body: JSON.stringify(updateData) }),
+  delete: (project_id) => apiRequest(`/projects/${project_id}`, { method: "DELETE" }),
   sendRequest: (requestData) => apiRequest("/requests/send", { method: "POST", body: JSON.stringify(requestData) }),
 };
 
 // ==================== TEAMMATE API ====================
 export const teammateAPI = {
   search: (params) => apiRequest("/teammates/search", { method: "POST", body: JSON.stringify(params) }),
-
-           
+  
+  testSend: (data) => {
+    // Test endpoint - no auth
+    const payload = {
+      teammate_id: data.teammate_id,
+      project_id: data.project_id,
+      message: data.message
+    };
+    
+    console.log("🧪 TEST: Calling /requests/test-send:", payload);
+    
+    return apiRequest("/requests/test-send", {  
+      method: "POST", 
+      body: JSON.stringify(payload)
+    });
+  },
+  
   sendRequest: (data) => {
-    return apiRequest("/requests/send", {
-      method: "POST",
-      body: JSON.stringify({
-        teammateId: data.teammateId,
-        projectId: data.projectId,
-        subject: String(data.subject || "Collaboration Request"),
-        message: data.message
-      })
+    // Validate and convert IDs to integers
+    const teammate_id = parseInt(data.teammate_id);
+    const project_id = parseInt(data.project_id);
+    const message = (data.message || "").trim();
+
+    // Validate required fields BEFORE sending
+    if (!teammate_id || !project_id || !message) {
+      const missing = [];
+      if (!teammate_id) missing.push("teammate_id");
+      if (!project_id) missing.push("project_id");
+      if (!message) missing.push("message");
+      
+      const errorMsg = `Missing required fields: ${missing.join(", ")}`;
+      console.error("❌ Validation failed:", errorMsg, { teammate_id, project_id, message });
+      return Promise.reject(new Error(errorMsg));
+    }
+
+    const payload = {
+      teammate_id: teammate_id,
+      project_id: project_id,
+      subject: data.subject || "Collaboration Request",
+      message: message
+    };
+    
+    console.log("📤 Sending payload to /requests/send:", payload);
+
+    return apiRequest("/requests/send", {  
+      method: "POST", 
+      body: JSON.stringify(payload)
     });
   },
 
@@ -135,6 +176,7 @@ export const teammateAPI = {
   acceptRequest: (id) => apiRequest(`/requests/${id}/accept`, { method: "PUT" }),
   rejectRequest: (id) => apiRequest(`/requests/${id}/reject`, { method: "PUT" }),
 };
+
 
 // ==================== NOTIFICATION API ====================
 export const notificationAPI = {

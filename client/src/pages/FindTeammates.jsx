@@ -40,7 +40,9 @@ const FindTeammates = ({ currentUser, activeUsers = [], kanbanData }) => {
     // Get active projects from kanbanData
     const todo = kanbanData?.todo || [];
     const inProgress = kanbanData?.inProgress || [];
-    return [...todo, ...inProgress];
+    const projects = [...todo, ...inProgress];
+    console.log("📋 Initial activeProjects:", projects);
+    return projects;
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -93,7 +95,9 @@ const FindTeammates = ({ currentUser, activeUsers = [], kanbanData }) => {
     if (kanbanData) {
       const todo = kanbanData.todo || [];
       const inProgress = kanbanData.inProgress || [];
-      setActiveProjects([...todo, ...inProgress]);
+      const projects = [...todo, ...inProgress];
+      console.log("📋 Active projects updated:", projects);
+      setActiveProjects(projects);
     }
   }, [kanbanData]);
 
@@ -135,6 +139,11 @@ const FindTeammates = ({ currentUser, activeUsers = [], kanbanData }) => {
     setError(null);
     
     try {
+      // Test if backend is reachable
+      const testResponse = await fetch('http://localhost:5000/api/test');
+      const testData = await testResponse.json();
+      console.log("🧪 Backend test:", testData);
+      
       console.log('🔍 Searching teammates with filters:', filters, 'Query:', searchQuery);
       
       const response = await teammateAPI.search({
@@ -147,6 +156,7 @@ const FindTeammates = ({ currentUser, activeUsers = [], kanbanData }) => {
       console.log('✅ Search Response:', response);
 
       if (response.success) {
+  console.log("✅ Found teammates:", response.results);
   setFilteredTeammates(response.results || []);
   setShowResults(true);
 } else {
@@ -199,6 +209,7 @@ const FindTeammates = ({ currentUser, activeUsers = [], kanbanData }) => {
   };
 
   const handleSendRequest = (teammate) => {
+    console.log("🎯 Opening request modal for teammate:", teammate);
     setSelectedTeammate(teammate);
     setShowRequestModal(true);
     setRequestMessage('');
@@ -206,60 +217,93 @@ const FindTeammates = ({ currentUser, activeUsers = [], kanbanData }) => {
   };
 
 const submitRequest = async (e) => {
-  e.preventDefault();
+  if (e && e.preventDefault) {
+    e.preventDefault();
+  }
+  
+  console.log("🔴 ======= SUBMIT REQUEST CALLED =======");
+  console.log("selectedTeammate:", selectedTeammate);
+  console.log("projectForRequest:", projectForRequest);
+  console.log("requestMessage:", requestMessage);
+  
   setIsLoading(true);
   setError(null);
 
   try {
-    if (!selectedTeammate || !projectForRequest || !requestMessage.trim()) {
-      setError("Please fill in all fields");
+    // Validate inputs
+    if (!selectedTeammate?.id) {
+      const err = "No teammate selected";
+      console.error("❌", err);
+      setError(err);
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!projectForRequest) {
+      const err = "Please select or enter a project ID";
+      console.error("❌", err);
+      setError(err);
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!requestMessage || !requestMessage.trim()) {
+      const err = "Please enter a message";
+      console.error("❌", err);
+      setError(err);
       setIsLoading(false);
       return;
     }
 
-    console.log("📨 Sending collaboration request...");
+    console.log("✅ Validations passed!");
 
-    const response = await teammateAPI.sendRequest({
-      teammateId: selectedTeammate.id,
-      projectId: projectForRequest,
-      subject: `Request to join project ${projectForRequest}`, // optional dynamic subject
+    const payload = {
+      teammate_id: selectedTeammate.id,
+      project_id: projectForRequest,
       message: requestMessage
-    });
+    };
+    
+    console.log("📤 Calling API with payload:", payload);
 
-    console.log("✅ Request sent:", response);
+    // Use test endpoint first to debug
+    const response = await teammateAPI.testSend(payload);
+
+    console.log("📥 API Response:", response);
 
     if (response.success) {
-      const newRequest = {
+      console.log("🎉 SUCCESS!");
+      
+      setSentRequests([...sentRequests, {
         id: response.request_id || Date.now(),
         teammate: selectedTeammate,
         project: projectForRequest,
         message: requestMessage,
         status: "pending",
         timestamp: new Date().toISOString()
-      };
-
-      setSentRequests([...sentRequests, newRequest]);
+      }]);
 
       setShowRequestModal(false);
       setRequestMessage("");
       setProjectForRequest("");
       setSelectedTeammate(null);
       setSuccessMessage(`Request sent to ${selectedTeammate.full_name}! 🎉`);
-
       setTimeout(() => setSuccessMessage(""), 3000);
     } else {
+      console.error("❌ API returned error:", response.error);
       setError(response.error || "Failed to send request");
     }
 
   } catch (err) {
-    setError(err.message || "Failed to send collaboration request");
+    console.error("❌ Exception:", err);
+    setError(err.message || "Failed to send request");
   } finally {
     setIsLoading(false);
+    console.log("🔴 ======= SUBMIT REQUEST ENDED =======");
   }
 };
 
-  const isRequestSent = (teammateId) => {
-    return sentRequests.some(req => req.teammate.id === teammateId);
+  const isRequestSent = (teammate_id) => {
+    return sentRequests.some(req => req.teammate.id === teammate_id);
   };
 
   const FilterSection = ({ title, items, category }) => (
@@ -342,21 +386,40 @@ const submitRequest = async (e) => {
             <div className="modal-form">
               <div className="form-group">
                 <label>Select Project *</label>
-                <select
-                  value={projectForRequest}
-                  onChange={(e) => setProjectForRequest(e.target.value)}
-                  required
-                >
-                  <option value="">Choose a project</option>
-                  {activeProjects.map(project => (
-                    <option key={project.id} value={project.id}>
-                      {project.title}
-                    </option>
-                  ))}
-                  {activeProjects.length === 0 && (
-                    <option disabled>No active projects available</option>
-                  )}
-                </select>
+                {activeProjects.length === 0 ? (
+                  <div>
+                    <div style={{padding: '10px', backgroundColor: '#fee', borderRadius: '4px', color: 'red', marginBottom: '10px'}}>
+                      ⚠️ No active projects in Dashboard. Creating test project...
+                    </div>
+                    <input 
+                      type="number" 
+                      placeholder="Project ID (or create one in Dashboard first)"
+                      value={projectForRequest}
+                      onChange={(e) => setProjectForRequest(e.target.value)}
+                      style={{width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px'}}
+                    />
+                    <small style={{color: '#666', marginTop: '5px', display: 'block'}}>
+                      Tip: Create a project in the Dashboard to see it here
+                    </small>
+                  </div>
+                ) : (
+                  <select
+                    value={projectForRequest}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      console.log("🎯 Project selected:", val);
+                      setProjectForRequest(val);
+                    }}
+                    required
+                  >
+                    <option value="">-- Select a project --</option>
+                    {activeProjects.map(project => (
+                      <option key={project.id} value={String(project.id)}>
+                        {project.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div className="form-group">
@@ -371,12 +434,17 @@ const submitRequest = async (e) => {
               </div>
 
               <button 
-                onClick={submitRequest}
+                onClick={(e) => {
+                  console.log("🖱️ BUTTON CLICKED!");
+                  submitRequest(e);
+                }}
                 className="btn-send-request"
                 disabled={isLoading || !projectForRequest || !requestMessage.trim()}
               >
                 {isLoading ? '⏳ Sending...' : 'Send Request'}
               </button>
+              {!projectForRequest && <p style={{color: 'red', fontSize: '12px'}}>⚠️ Please select a project</p>}
+              {!requestMessage.trim() && <p style={{color: 'red', fontSize: '12px'}}>⚠️ Please enter a message</p>}
             </div>
           </div>
         </div>

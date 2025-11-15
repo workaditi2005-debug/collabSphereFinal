@@ -345,7 +345,7 @@ const Dashboard = ({ userData, onUpdateUserData, onLogout }) => {
                 >
                   <div className="column-header">
                     <div className="column-title">
-                      <span className="column-icon">⏰</span>
+                      <span className="column-icon"></span>
                       <h3>Todo</h3>
                       <span className="column-count">{kanbanData.todo.length}</span>
                     </div>
@@ -608,14 +608,14 @@ const Dashboard = ({ userData, onUpdateUserData, onLogout }) => {
                     setShowProfileDropdown(false);
                   }}
                 >
-                  <span className="dropdown-icon">👤</span>
+                  <span className="dropdown-icon"></span>
                   Profile
                 </button>
                 <button 
                   className="dropdown-item logout"
                   onClick={handleLogout}
                 >
-                  <span className="dropdown-icon">🚪</span>
+                  <span className="dropdown-icon"></span>
                   Sign Out
                 </button>
               </div>

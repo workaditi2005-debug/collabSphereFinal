@@ -50,32 +50,32 @@ const Home = () => {
         </p>
         <div className="features-grid">
           <div className="feature-card">
-            <div className="icon">👥</div>
+            <div className="icon"></div>
             <h3>Find Perfect Teammates</h3>
             <p>Advanced filtering by skills, interests, and availability. Connect with students who complement your strengths.</p>
           </div>
           <div className="feature-card">
-            <div className="icon">🎯</div>
+            <div className="icon"></div>
             <h3>Project Management</h3>
             <p>Kanban boards, task tracking, and progress monitoring. Keep your team organized and on track.</p>
           </div>
           <div className="feature-card">
-            <div className="icon">💬</div>
+            <div className="icon"></div>
             <h3>Real-time Communication</h3>
             <p>Built-in chat and comment system. Discuss ideas, share updates, and collaborate seamlessly.</p>
           </div>
           <div className="feature-card">
-            <div className="icon">🧠</div>
+            <div className="icon"></div>
             <h3>ML-Powered Insights</h3>
             <p>Sentiment analysis on team interactions and collaboration health scores to optimize teamwork.</p>
           </div>
           <div className="feature-card">
-            <div className="icon">📊</div>
+            <div className="icon"></div>
             <h3>Analytics Dashboard</h3>
             <p>Track your progress, view team metrics, and get actionable insights to improve collaboration.</p>
           </div>
           <div className="feature-card">
-            <div className="icon">⭐</div>
+            <div className="icon"></div>
             <h3>Peer Reviews</h3>
             <p>Give and receive constructive feedback from teammates to improve collaboration and build stronger teams.</p>
           </div>

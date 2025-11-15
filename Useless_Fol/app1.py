@@ -17,24 +17,15 @@ app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key-chang
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
 
 # ==================== CORS CONFIGURATION ====================
-
-CORS(app,
-     resources={
-         r"/api/*": {
-             "origins": [
-                 "http://localhost:5173",
-                 "http://localhost:5000",
-                 "http://localhost:3000",
-                 "http://127.0.0.1:5173",
-                 "http://127.0.0.1:3000"
-             ]
-         }
-     },
-     supports_credentials=True,
-     allow_headers=["Content-Type", "Authorization"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     max_age=3600
-)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True,
+        "max_age": 3600
+    }
+})
 
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
@@ -555,7 +546,6 @@ def update_project(project_id):
         print(f"❌ Update project error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 # ==================== HEALTH CHECK ====================
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -819,206 +809,74 @@ def search_teammates():
         "results": teammates
     }), 200
 
-@app.route('/api/test', methods=['GET'])
-def test():
-    """Test endpoint"""
-    return jsonify({'success': True, 'message': 'Backend is working'}), 200
 
-@app.route('/api/requests/test-send', methods=['POST', 'OPTIONS'])
-def test_send_collaboration_request():
-    """Test collaboration request endpoint (no auth required)"""
-    if request.method == 'OPTIONS':
-        return '', 204
-    
-    try:
-        data = request.get_json()
         
-        print(f"\n🧪 TEST ENDPOINT CALLED")
-        print(f"📦 Request data: {data}")
-        
-        # Validate required fields
-        teammate_id = data.get('teammate_id')
-        project_id = data.get('project_id')
-        message = data.get('message', '').strip()
-        
-        print(f"   ➤ teammate_id: {teammate_id}")
-        print(f"   ➤ project_id: {project_id}")
-        print(f"   ➤ message: {message}")
-        
-        if not all([teammate_id, project_id, message]):
-            return jsonify({
-                'success': False,
-                'error': 'Missing required fields'
-            }), 400
-        
-        return jsonify({
-            'success': True,
-            'message': 'Test request received',
-            'request_id': 999
-        }), 201
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
 # ==================== COLLABORATION REQUESTS ====================
 @app.route('/api/requests/send', methods=['POST', 'OPTIONS'])
-@jwt_required(optional=True)
+@jwt_required()
 def send_collaboration_request():
-    """Send collaboration request with notification"""
+    """Send collaboration request"""
     if request.method == 'OPTIONS':
         return '', 204
 
     try:
         sender_id = get_jwt_identity()
-        
-        # If no JWT token, use a test user ID
-        if not sender_id:
-            print("⚠️  No JWT identity, using test user ID 1")
-            sender_id = 1
-        
         data = request.get_json()
         
-        print(f"📨 Sending collaboration request from user {sender_id}")
-        print(f"📦 Request data: {data}")
+        required = ['recipient_id', 'project_id', 'message']
+        for field in required:
+            if field not in data:
+                return jsonify({'success': False, 'error': f'Missing field: {field}'}), 400
         
-        # Validate required fields (accept both camelCase and snake_case)
-        teammate_id = data.get('teammate_id') or data.get('teammateId')
-        project_id = data.get('project_id') or data.get('projectId')
-        message = data.get('message', '').strip()
-        subject = data.get('subject', 'Collaboration Request')
+        db = get_db()
         
-        print(f"   ➤ Raw teammate_id: {teammate_id} (type: {type(teammate_id).__name__})")
-        print(f"   ➤ Raw project_id: {project_id} (type: {type(project_id).__name__})")
-        print(f"   ➤ Raw message: '{message}' (len: {len(message)})")
+        # Get sender and recipient info
+        sender = db.execute('SELECT full_name FROM users WHERE id = ?', (sender_id,)).fetchone()
+        project = db.execute('SELECT title FROM projects WHERE id = ?', (data['project_id'],)).fetchone()
         
-        # Validate non-empty message
-        if not message:
-            print(f"   ❌ Message is empty")
-            return jsonify({
-                'success': False, 
-                'error': 'Message cannot be empty'
-            }), 422
-        
-        # Convert IDs to integers - be more lenient
-        try:
-            teammate_id = int(teammate_id) if teammate_id else None
-            project_id = int(project_id) if project_id else None
-        except (ValueError, TypeError) as e:
-            print(f"   ❌ ID conversion error: {e}")
-            print(f"   ➤ Attempted to convert - teammate_id: {data.get('teammate_id')}, project_id: {data.get('project_id')}")
-            return jsonify({
-                'success': False, 
-                'error': f'Invalid teammate_id or project_id format'
-            }), 422
-        
-        # Validate all required fields are present
-        if not teammate_id or not project_id:
-            missing = []
-            if not teammate_id:
-                missing.append('teammate_id')
-            if not project_id:
-                missing.append('project_id')
-            
-            error_msg = f"Missing required fields: {', '.join(missing)}"
-            print(f"   ❌ Validation error: {error_msg}")
-            return jsonify({
-                'success': False, 
-                'error': error_msg
-            }), 422
-        
-        print(f"   ✅ All validations passed")
-        
-        db_conn = get_db()
-        
-        # Get sender and project info for notification
-        sender = db_conn.execute(
-            'SELECT full_name, email FROM users WHERE id = ?', 
-            (sender_id,)
-        ).fetchone()
-        
-        project = db_conn.execute(
-            'SELECT title FROM projects WHERE id = ?', 
-            (project_id,)
-        ).fetchone()
-        
-        if not sender:
-            db_conn.close()
-            return jsonify({'success': False, 'error': 'Sender not found'}), 404
-            
-        if not project:
-            db_conn.close()
-            return jsonify({'success': False, 'error': 'Project not found'}), 404
-        
-        # Check if request already exists
-        existing = db_conn.execute(
-            '''SELECT id FROM collaboration_requests 
-               WHERE sender_id = ? AND recipient_id = ? AND project_id = ? AND status = 'pending' ''',
-            (sender_id, teammate_id, project_id)
-        ).fetchone()
-        
-        if existing:
-            db_conn.close()
-            return jsonify({
-                'success': False, 
-                'error': 'You already have a pending request for this project'
-            }), 409
-        
-        # Create collaboration request
-        cursor = db_conn.execute(
+        # Create request
+        cursor = db.execute(
             '''INSERT INTO collaboration_requests 
                (sender_id, recipient_id, project_id, message, status, created_at)
                VALUES (?, ?, ?, ?, ?, ?)''',
             (
                 sender_id,
-                teammate_id,
-                project_id,
-                message,
+                data['recipient_id'],
+                data['project_id'],
+                data['message'],
                 'pending',
                 datetime.now().isoformat()
             )
         )
-        request_id = cursor.lastrowid
-        db_conn.commit()
-        
-        print(f"✅ Collaboration request created with ID: {request_id}")
+        db.commit()
         
         # Create notification for recipient
-        notification_message = f"{sender['full_name']} wants to collaborate on '{project['title']}'"
-        
-        db_conn.execute(
+        db.execute(
             '''INSERT INTO notifications 
-               (user_id, type, message, sender_name, project_title, is_read, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)''',
+               (user_id, type, message, sender_name, project_title, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)''',
             (
-                teammate_id,
+                data['recipient_id'],
                 'incoming_request',
-                notification_message,
-                sender['full_name'],
-                project['title'],
-                0,
+                data['message'],
+                sender['full_name'] if sender else 'Unknown',
+                project['title'] if project else 'Unknown',
                 datetime.now().isoformat()
             )
         )
-        db_conn.commit()
+        db.commit()
         
-        print(f"✅ Notification created for user {teammate_id}")
-        
-        db_conn.close()
+        db.close()
         
         return jsonify({
             'success': True,
             'message': 'Collaboration request sent successfully',
-            'request_id': request_id
+            'request_id': cursor.lastrowid
         }), 201
         
     except Exception as e:
         print(f"❌ Send collaboration request error: {str(e)}")
-        traceback.print_exc()
-        return jsonify({
-            'success': False, 
-            'error': str(e)
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/requests/received', methods=['GET', 'OPTIONS'])
 @jwt_required()
@@ -1265,8 +1123,6 @@ def get_given_reviews():
     except Exception as e:
         print(f"❌ Get given reviews error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
-
 
 # ==================== MAIN ====================
 if __name__ == '__main__':
