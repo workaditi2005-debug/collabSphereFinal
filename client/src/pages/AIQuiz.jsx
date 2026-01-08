@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../utils/constants';
 
 const AIQuiz = ({ userData, kanbanData }) => {
   const [quizState, setQuizState] = useState('home'); // home, setup, taking, results, leaderboard
@@ -73,37 +74,44 @@ const AIQuiz = ({ userData, kanbanData }) => {
   const generateQuiz = async () => {
     setIsGenerating(true);
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      // Call server-side AI proxy (try real endpoint first, fall back to mock if API key not set)
+      let response = await fetch(`${API_BASE_URL}/ai/generate-quiz`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: `Generate ${quizConfig.questionCount} multiple choice questions about "${quizConfig.topic}" at ${quizConfig.difficulty} difficulty level. 
-            
-            Return ONLY valid JSON in this exact format with no markdown, no preamble, no explanation:
-            {
-              "questions": [
-                {
-                  "question": "question text",
-                  "options": ["option1", "option2", "option3", "option4"],
-                  "correctAnswer": 0,
-                  "explanation": "why this is correct"
-                }
-              ]
-            }
-            
-            Make questions educational and relevant to the topic. Ensure correctAnswer is the index (0-3) of the correct option.`
-          }]
+          topic: quizConfig.topic,
+          difficulty: quizConfig.difficulty,
+          questionCount: quizConfig.questionCount,
+          timeLimit: quizConfig.timeLimit
         })
       });
 
+      // If real endpoint fails (API key not configured), fall back to mock
+      if (!response.ok) {
+        console.log('Real AI endpoint failed, falling back to mock for testing...');
+        response = await fetch(`${API_BASE_URL}/ai/generate-quiz-mock`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            topic: quizConfig.topic,
+            difficulty: quizConfig.difficulty,
+            questionCount: quizConfig.questionCount,
+            timeLimit: quizConfig.timeLimit
+          })
+        });
+      }
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'AI service failed');
+      }
       const data = await response.json();
-      const content = data.content.find(item => item.type === 'text')?.text || '';
+      const anthResp = data.result || data;
+      const content = anthResp.content?.find?.(item => item.type === 'text')?.text || '';
       
       const cleanedContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       const quizData = JSON.parse(cleanedContent);
@@ -124,7 +132,7 @@ const AIQuiz = ({ userData, kanbanData }) => {
       setTimeTaken([]);
     } catch (err) {
       console.error('Error generating quiz:', err);
-      alert('Failed to generate quiz. Please try again.');
+      alert(`Failed to generate quiz. ${err?.message || 'Please try again.'}`);
     } finally {
       setIsGenerating(false);
     }
@@ -167,31 +175,27 @@ const AIQuiz = ({ userData, kanbanData }) => {
 
     setIsGenerating(true);
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch(`${API_BASE_URL}/ai/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: `A student scored ${score}/${currentQuiz.questions.length} (${percentage.toFixed(0)}%) on a ${quizConfig.difficulty} difficulty quiz about "${quizConfig.topic}". Average time per question: ${(avgTimePerQuestion / 1000).toFixed(1)} seconds.
-
-Provide personalized feedback in ONLY valid JSON format with no markdown or preamble:
-{
-  "overallFeedback": "encouraging feedback about their performance",
-  "strengths": "what they did well",
-  "improvements": "specific areas to improve",
-  "recommendations": "next steps or study suggestions"
-}`
-          }]
+          score: score,
+          total: currentQuiz.questions.length,
+          difficulty: quizConfig.difficulty,
+          topic: quizConfig.topic,
+          avgTime: avgTimePerQuestion / 1000
         })
       });
 
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'AI service failed');
+      }
       const data = await response.json();
-      const content = data.content.find(item => item.type === 'text')?.text || '';
+      const anthResp = data.result || data;
+      const content = anthResp.content?.find?.(item => item.type === 'text')?.text || '';
       const cleanedContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       const feedbackData = JSON.parse(cleanedContent);
       setFeedback(feedbackData);

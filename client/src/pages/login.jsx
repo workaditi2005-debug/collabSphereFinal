@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Login.css';  
+import './login.css';  
 import { authAPI } from '../utils/api';
 import { AVAILABLE_SKILLS, ACADEMIC_YEARS, VALIDATION, TOAST_MESSAGES } from '../utils/constants';
 

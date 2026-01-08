@@ -73,6 +73,16 @@ source venv/bin/activate       # macOS/Linux
 
 pip install -r requirements.txt
 python main.py                 # Starts on port 5000
+
+### Optional: AI features (Anthropic)
+
+To enable AI-driven quiz generation and feedback you must set an Anthropic API key in the backend environment variables. Create a `.env` file in the `backend/` folder with:
+
+```
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+```
+
+Then restart the backend. The frontend calls `/api/ai/generate-quiz` and `/api/ai/feedback` — the backend proxies those requests to the Anthropic API so your key is not exposed in the browser.
 ```
 
 ### Frontend Setup

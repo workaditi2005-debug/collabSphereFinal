@@ -20,5 +20,8 @@ flask-swagger-ui==4.11.1
 # For better logging
 python-json-logger==2.0.7
 
+# HTTP client for making AI requests
+requests==2.32.5
+
 # For data validation
 marshmallow==3.20.1

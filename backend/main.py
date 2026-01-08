@@ -4,12 +4,17 @@ from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 import sqlite3
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 import os
 from functools import wraps
 import traceback
 import json
+import requests
 
 app = Flask(__name__)
+
+# Load environment variables from backend/.env if present
+load_dotenv()
 
 # ==================== CONFIGURATION ====================
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
@@ -825,6 +830,455 @@ def search_teammates():
 def test():
     """Test endpoint"""
     return jsonify({'success': True, 'message': 'Backend is working'}), 200
+
+
+# ==================== MOCK AI ENDPOINTS (for testing without API key) ====================
+@app.route('/api/ai/generate-quiz-mock', methods=['POST', 'OPTIONS'])
+def ai_generate_quiz_mock():
+    """Mock quiz generation endpoint (returns difficulty-specific questions - no API key needed)."""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    try:
+        payload = request.get_json() or {}
+        topic = payload.get('topic', 'General Knowledge').lower()
+        difficulty = payload.get('difficulty', 'medium').lower()
+        questionCount = int(payload.get('questionCount', 5))
+
+        # Sample questions database organized by topic and difficulty
+        questions_db = {
+            'javascript': {
+                'easy': [
+                    {
+                        "question": "What keyword is used to declare a variable in JavaScript?",
+                        "options": ["var, let, const", "variable", "declare", "define"],
+                        "correctAnswer": 0,
+                        "explanation": "JavaScript uses var, let, and const keywords to declare variables."
+                    },
+                    {
+                        "question": "Which method is used to add elements to the end of an array?",
+                        "options": ["add()", "push()", "append()", "insert()"],
+                        "correctAnswer": 1,
+                        "explanation": "The push() method adds one or more elements to the end of an array."
+                    },
+                    {
+                        "question": "What does console.log() do?",
+                        "options": ["Creates a log file", "Prints output to the console", "Logs into a website", "Creates a new variable"],
+                        "correctAnswer": 1,
+                        "explanation": "console.log() prints text or values to the browser console for debugging."
+                    },
+                    {
+                        "question": "Which symbol is used for comments in JavaScript?",
+                        "options": ["#", "//", "<!--", "--"],
+                        "correctAnswer": 1,
+                        "explanation": "// is used for single-line comments in JavaScript."
+                    },
+                    {
+                        "question": "What is the correct way to write 'Hello World' in an alert box?",
+                        "options": ["alert('Hello World')", "msgBox('Hello World')", "alertBox('Hello World')", "popup('Hello World')"],
+                        "correctAnswer": 0,
+                        "explanation": "alert('Hello World') displays an alert dialog with the message."
+                    },
+                ],
+                'medium': [
+                    {
+                        "question": "What is the output of typeof null in JavaScript?",
+                        "options": ["'null'", "'object'", "'undefined'", "'NaN'"],
+                        "correctAnswer": 1,
+                        "explanation": "Due to a bug in JavaScript, typeof null returns 'object' instead of 'null'."
+                    },
+                    {
+                        "question": "What is the difference between let and var?",
+                        "options": ["No difference", "let is block-scoped, var is function-scoped", "var is newer than let", "let cannot be reassigned"],
+                        "correctAnswer": 1,
+                        "explanation": "let is block-scoped (limited to the nearest enclosing block), while var is function-scoped."
+                    },
+                    {
+                        "question": "What does the spread operator (...) do?",
+                        "options": ["Creates comments", "Expands iterables into arguments or elements", "Multiplies values", "Defines a function"],
+                        "correctAnswer": 1,
+                        "explanation": "The spread operator allows iterables to be expanded in places where zero or more elements are expected."
+                    },
+                    {
+                        "question": "What is a closure in JavaScript?",
+                        "options": ["A loop that closes", "A function that has access to variables from its outer scope", "A type of error", "A way to close a program"],
+                        "correctAnswer": 1,
+                        "explanation": "A closure is a function that has access to variables from its parent scope even after the parent function has closed."
+                    },
+                    {
+                        "question": "Which method removes the last element from an array?",
+                        "options": ["shift()", "pop()", "splice()", "slice()"],
+                        "correctAnswer": 1,
+                        "explanation": "The pop() method removes the last element from an array and returns that element."
+                    },
+                ],
+                'hard': [
+                    {
+                        "question": "What is the difference between == and === in JavaScript?",
+                        "options": ["No difference", "== compares value, === compares value and type", "=== compares value, == compares type", "They are opposite"],
+                        "correctAnswer": 1,
+                        "explanation": "== performs type coercion, while === checks both value and type without coercion."
+                    },
+                    {
+                        "question": "What is hoisting in JavaScript?",
+                        "options": ["Moving elements on a page", "Moving declarations to the top of their scope before execution", "A function call", "A type of error"],
+                        "correctAnswer": 1,
+                        "explanation": "Hoisting is JavaScript's behavior of moving declarations to the top of their scope before code execution."
+                    },
+                    {
+                        "question": "What does Object.freeze() do?",
+                        "options": ["Stops a function", "Makes an object immutable", "Removes an object", "Clones an object"],
+                        "correctAnswer": 1,
+                        "explanation": "Object.freeze() makes an object immutable, preventing modifications to its properties."
+                    },
+                    {
+                        "question": "What is the event loop in JavaScript?",
+                        "options": ["A loop in HTML", "The mechanism that executes code, collects events, and executes queued sub-tasks", "A type of error", "A function"],
+                        "correctAnswer": 1,
+                        "explanation": "The event loop is the core mechanism that allows JavaScript to perform asynchronous operations."
+                    },
+                    {
+                        "question": "What is the difference between async/await and promises?",
+                        "options": ["They are the same", "async/await is syntactic sugar over promises for cleaner code", "promises are newer", "No practical difference"],
+                        "correctAnswer": 1,
+                        "explanation": "async/await provides a cleaner way to write asynchronous code compared to promise chains."
+                    },
+                ],
+            },
+            'python': {
+                'easy': [
+                    {
+                        "question": "What is the correct syntax to create a function in Python?",
+                        "options": ["function myFunc():", "def myFunc():", "func myFunc():", "define myFunc():"],
+                        "correctAnswer": 1,
+                        "explanation": "Python uses the 'def' keyword to define functions."
+                    },
+                    {
+                        "question": "How do you create a comment in Python?",
+                        "options": ["// comment", "<!-- comment -->", "# comment", "/* comment */"],
+                        "correctAnswer": 2,
+                        "explanation": "In Python, comments are created using the # symbol."
+                    },
+                    {
+                        "question": "What is the output of print(5 * 2)?",
+                        "options": ["7", "10", "52", "25"],
+                        "correctAnswer": 1,
+                        "explanation": "5 * 2 = 10. The print() function outputs the result."
+                    },
+                    {
+                        "question": "Which data type is used to store text in Python?",
+                        "options": ["int", "float", "str", "bool"],
+                        "correctAnswer": 2,
+                        "explanation": "The str (string) data type is used to store text in Python."
+                    },
+                    {
+                        "question": "What keyword is used to create a loop in Python?",
+                        "options": ["loop", "while", "repeat", "iterate"],
+                        "correctAnswer": 1,
+                        "explanation": "The while keyword creates a loop in Python (for loops also exist)."
+                    },
+                ],
+                'medium': [
+                    {
+                        "question": "Which of the following is a mutable data type in Python?",
+                        "options": ["tuple", "string", "list", "frozenset"],
+                        "correctAnswer": 2,
+                        "explanation": "Lists are mutable. Tuples, strings, and frozensets are immutable."
+                    },
+                    {
+                        "question": "What does the 'self' keyword represent in Python?",
+                        "options": ["The class itself", "The instance of the class", "A global variable", "A built-in function"],
+                        "correctAnswer": 1,
+                        "explanation": "self represents the instance of the class in Python methods."
+                    },
+                    {
+                        "question": "What is the purpose of the __init__ method?",
+                        "options": ["To initialize variables", "To create a constructor", "To initialize instances", "All of the above"],
+                        "correctAnswer": 3,
+                        "explanation": "__init__ is the constructor method that initializes new instances of a class."
+                    },
+                    {
+                        "question": "Which library is used for numerical computing in Python?",
+                        "options": ["pandas", "numpy", "matplotlib", "scikit-learn"],
+                        "correctAnswer": 1,
+                        "explanation": "NumPy is the fundamental package for numerical computing in Python."
+                    },
+                    {
+                        "question": "What is a list comprehension in Python?",
+                        "options": ["A way to understand lists", "A concise way to create lists", "A type of error", "A loop statement"],
+                        "correctAnswer": 1,
+                        "explanation": "List comprehension is a concise way to create lists by applying an operation to each item in an iterable."
+                    },
+                ],
+                'hard': [
+                    {
+                        "question": "What is the difference between *args and **kwargs?",
+                        "options": ["No difference", "*args passes positional args, **kwargs passes keyword arguments", "They are the same", "kwargs is newer"],
+                        "correctAnswer": 1,
+                        "explanation": "*args is for variable-length positional arguments, **kwargs is for keyword arguments."
+                    },
+                    {
+                        "question": "What is a decorator in Python?",
+                        "options": ["A function that decorates", "A function that modifies another function or class", "A type of variable", "A class"],
+                        "correctAnswer": 1,
+                        "explanation": "A decorator is a function that wraps another function to modify its behavior without permanently changing it."
+                    },
+                    {
+                        "question": "What is the GIL (Global Interpreter Lock)?",
+                        "options": ["A variable", "A lock preventing multiple threads from executing Python code simultaneously", "A library", "An error"],
+                        "correctAnswer": 1,
+                        "explanation": "The GIL is a mutex that protects access to Python objects in CPython."
+                    },
+                    {
+                        "question": "What is the difference between deep copy and shallow copy?",
+                        "options": ["No difference", "Shallow copy copies only references, deep copy copies everything recursively", "They are the same", "Deep copy is faster"],
+                        "correctAnswer": 1,
+                        "explanation": "Shallow copy creates a new object with references to nested objects, deep copy recursively copies everything."
+                    },
+                    {
+                        "question": "What is a generator in Python?",
+                        "options": ["A function that creates objects", "A function that uses yield to return values one at a time", "A type of loop", "A class"],
+                        "correctAnswer": 1,
+                        "explanation": "A generator is a function that returns an iterator object using the yield keyword."
+                    },
+                ],
+            },
+            'react': {
+                'easy': [
+                    {
+                        "question": "What is React?",
+                        "options": ["A server framework", "A JavaScript library for building user interfaces", "A database", "A CSS framework"],
+                        "correctAnswer": 1,
+                        "explanation": "React is a JavaScript library developed by Facebook for building UI components."
+                    },
+                    {
+                        "question": "What is JSX?",
+                        "options": ["A type of JavaScript", "A syntax extension for JavaScript that allows writing HTML in JavaScript", "A framework", "A library"],
+                        "correctAnswer": 1,
+                        "explanation": "JSX allows you to write HTML-like syntax in JavaScript, which gets compiled to JavaScript function calls."
+                    },
+                    {
+                        "question": "What is a component in React?",
+                        "options": ["A function", "A reusable piece of UI", "A class", "A variable"],
+                        "correctAnswer": 1,
+                        "explanation": "A component is a reusable, self-contained piece of UI that can be used throughout an application."
+                    },
+                    {
+                        "question": "What is the purpose of props in React?",
+                        "options": ["To style elements", "To pass data from parent to child components", "To manage state", "To create loops"],
+                        "correctAnswer": 1,
+                        "explanation": "Props are used to pass data and configuration from parent components to child components."
+                    },
+                    {
+                        "question": "What is state in React?",
+                        "options": ["The status of a server", "Data that changes over time and causes re-renders", "A variable", "A function"],
+                        "correctAnswer": 1,
+                        "explanation": "State is data that can change and causes a component to re-render when updated."
+                    },
+                ],
+                'medium': [
+                    {
+                        "question": "What is the purpose of the useState hook?",
+                        "options": ["To manage component state", "To fetch data", "To style components", "To route pages"],
+                        "correctAnswer": 0,
+                        "explanation": "useState is a React Hook that allows functional components to have state."
+                    },
+                    {
+                        "question": "What is the useEffect hook used for?",
+                        "options": ["To create effects", "To handle side effects and lifecycle events", "To manage props", "To style elements"],
+                        "correctAnswer": 1,
+                        "explanation": "useEffect runs side effects like fetching data, updating the DOM, or subscribing to events."
+                    },
+                    {
+                        "question": "What is the Virtual DOM?",
+                        "options": ["An actual DOM", "A lightweight in-memory representation of the real DOM", "A database", "A server"],
+                        "correctAnswer": 1,
+                        "explanation": "The Virtual DOM is React's way of optimizing updates by comparing and syncing with the real DOM."
+                    },
+                    {
+                        "question": "How do you handle events in React?",
+                        "options": ["Using onclick attribute", "Using camelCase event handlers like onClick", "Using addEventListener", "Using on: prefix"],
+                        "correctAnswer": 1,
+                        "explanation": "React uses camelCase event handlers (onClick, onChange, etc.) passed as JSX attributes."
+                    },
+                    {
+                        "question": "What is conditional rendering in React?",
+                        "options": ["Using if statements only", "Rendering components based on conditions", "A type of loop", "A CSS feature"],
+                        "correctAnswer": 1,
+                        "explanation": "Conditional rendering displays different content based on certain conditions using if/else or ternary operators."
+                    },
+                ],
+                'hard': [
+                    {
+                        "question": "What is the Context API in React?",
+                        "options": ["An API call", "A way to pass data through the component tree without prop drilling", "A hook", "A library"],
+                        "correctAnswer": 1,
+                        "explanation": "Context API provides a way to share state globally without passing props through every level."
+                    },
+                    {
+                        "question": "What is reconciliation in React?",
+                        "options": ["Making peace", "The process of updating the Virtual DOM and comparing with real DOM", "A type of hook", "A state management"],
+                        "correctAnswer": 1,
+                        "explanation": "Reconciliation is React's process of determining how to update the UI efficiently."
+                    },
+                    {
+                        "question": "What is the useReducer hook?",
+                        "options": ["For reducing arrays", "For managing complex state with an action-based reducer function", "For styling", "For routing"],
+                        "correctAnswer": 1,
+                        "explanation": "useReducer is a hook for managing state with a reducer function, useful for complex state logic."
+                    },
+                    {
+                        "question": "What is memoization in React?",
+                        "options": ["Storing memories", "Optimizing performance by caching component renders", "A variable", "A function"],
+                        "correctAnswer": 1,
+                        "explanation": "Memoization (React.memo) prevents unnecessary re-renders of components when props haven't changed."
+                    },
+                    {
+                        "question": "What is a custom hook in React?",
+                        "options": ["A built-in hook", "A reusable function that uses other hooks to encapsulate logic", "A state hook", "A lifecycle hook"],
+                        "correctAnswer": 1,
+                        "explanation": "Custom hooks are functions that use other hooks to extract component logic into reusable functions."
+                    },
+                ],
+            },
+        }
+
+        # Get questions for the topic and difficulty
+        if topic in questions_db and difficulty in questions_db[topic]:
+            available_questions = questions_db[topic][difficulty]
+        else:
+            # Fallback to a generic question if topic/difficulty not found
+            available_questions = [{
+                "question": f"What is your experience with {topic}?",
+                "options": ["Beginner", "Intermediate", "Advanced", "Expert"],
+                "correctAnswer": 0,
+                "explanation": f"Sample question for {topic}. Add your Anthropic API key to backend/.env for real questions."
+            }]
+
+        # Select questions (cycle if not enough)
+        selected_questions = available_questions[:questionCount]
+        if len(selected_questions) < questionCount:
+            selected_questions = selected_questions * (questionCount // len(selected_questions) + 1)
+            selected_questions = selected_questions[:questionCount]
+
+        # Format as Anthropic response
+        mock_response = {
+            'content': [
+                {
+                    'type': 'text',
+                    'text': json.dumps({"questions": selected_questions})
+                }
+            ]
+        }
+
+        return jsonify({'success': True, 'result': mock_response}), 200
+
+    except Exception as e:
+        print(f"❌ Mock quiz error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/ai/generate-quiz', methods=['POST', 'OPTIONS'])
+def ai_generate_quiz():
+    """Generate a quiz using Anthropic (server-side proxy for API key)."""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    try:
+        payload = request.get_json() or {}
+        topic = payload.get('topic', '')
+        difficulty = payload.get('difficulty', 'medium')
+        questionCount = int(payload.get('questionCount', 5))
+        timeLimit = int(payload.get('timeLimit', 60))
+
+        if not topic:
+            return jsonify({'success': False, 'error': 'topic is required'}), 400
+
+        api_key = os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            return jsonify({'success': False, 'error': 'AI provider API key not configured'}), 500
+
+        # Build the prompt to send
+        prompt = f"Generate {questionCount} multiple choice questions about \"{topic}\" at {difficulty} difficulty level.\n\nReturn ONLY valid JSON in this exact format with no markdown, no preamble, no explanation:\n{{\n  \"questions\": [{{\n    \"question\": \"question text\",\n    \"options\": [\"option1\", \"option2\", \"option3\", \"option4\"],\n    \"correctAnswer\": 0,\n    \"explanation\": \"why this is correct\"\n  }}]\n}}\n\nMake questions educational and relevant to the topic. Ensure correctAnswer is the index (0-3) of the correct option."
+
+        url = 'https://api.anthropic.com/v1/messages'
+        headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': api_key
+        }
+
+        body = {
+            'model': 'claude-sonnet-4-20250514',
+            'max_tokens': 1000,
+            'messages': [
+                {
+                    'role': 'user',
+                    'content': prompt
+                }
+            ]
+        }
+
+        resp = requests.post(url, headers=headers, json=body, timeout=15)
+        resp.raise_for_status()
+
+        result = resp.json()
+
+        # Return the raw content to the client (AIQuiz will clean/parse JSON)
+        return jsonify({'success': True, 'result': result}), 200
+
+    except Exception as e:
+        print(f"❌ AI generate quiz error: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/ai/feedback', methods=['POST', 'OPTIONS'])
+def ai_feedback():
+    """Generate personalized feedback using Anthropic (server-side proxy)."""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    try:
+        payload = request.get_json() or {}
+        # payload should include: score, total, difficulty, topic, avg_time
+        score = payload.get('score')
+        total = payload.get('total')
+        difficulty = payload.get('difficulty', 'medium')
+        topic = payload.get('topic', '')
+        avg_time = payload.get('avgTime', 0)
+
+        if score is None or total is None:
+            return jsonify({'success': False, 'error': 'score and total required'}), 400
+
+        api_key = os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            return jsonify({'success': False, 'error': 'AI provider API key not configured'}), 500
+
+        prompt = (
+            f"A student scored {score}/{total} on a {difficulty} difficulty quiz about \"{topic}\". "
+            f"Average time per question: {avg_time:.1f} seconds.\n\n"
+            "Provide personalized feedback in ONLY valid JSON format with no markdown or preamble:\n"
+            "{\n  \"overallFeedback\": \"encouraging feedback about their performance\",\n"
+            "  \"strengths\": \"what they did well\",\n"
+            "  \"improvements\": \"specific areas to improve\",\n"
+            "  \"recommendations\": \"next steps or study suggestions\"\n}"
+        )
+
+        url = 'https://api.anthropic.com/v1/messages'
+        headers = {'Content-Type': 'application/json', 'x-api-key': api_key}
+
+        body = {'model': 'claude-sonnet-4-20250514', 'max_tokens': 1000, 'messages': [{'role': 'user', 'content': prompt}]}
+
+        resp = requests.post(url, headers=headers, json=body, timeout=15)
+        resp.raise_for_status()
+        result = resp.json()
+
+        return jsonify({'success': True, 'result': result}), 200
+
+    except Exception as e:
+        print(f"❌ AI feedback error: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/requests/test-send', methods=['POST', 'OPTIONS'])
 def test_send_collaboration_request():
